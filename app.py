@@ -1,4 +1,6 @@
-from flask import Flask, jsonify, Response
+import os
+
+from flask import Flask, jsonify, Response, request
 from flask_cors import CORS 
 
 import psycopg2
@@ -7,10 +9,16 @@ from psycopg2.extras import RealDictCursor
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+# from PIL import Image
+
+import hash_trie
+
 app = Flask(__name__)
 app.config.from_object(__name__)
 
 CORS(app, resources={r'/*': {'origins': '*'}})
+
+TEST_IMAGES_DIR = os.path.join(os.path.abspath('./'),"test_images")
 
 
 DB_CONFIG={
@@ -43,7 +51,7 @@ def get_db_connection():
 def ping_pong():
     return jsonify("PONG")
 
-@app.route("/image/gallery")
+@app.route("/images/gallery")
 def get_all_image_metadata():
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -68,24 +76,50 @@ def get_image_data(image_id):
     cursor = conn.cursor()
 
     try:
-        # Query for the binary image data
-        cursor.execute("SELECT image FROM images WHERE id = %s;", (str(image_id),))
-        image = cursor.fetchone()
-
-        if image is None:
-            return jsonify({'error': 'Image not found'}), 404
-
-        image_binary = image[0]  # Extract binary data
-
-        cursor.close()
-        conn.close()
-
-        # Send the image as a binary response with the correct MIME type
-        return Response(image_binary, content_type='image/jpeg')  # Change to the appropriate MIME type
+        image_path = hash_trie.retrieve_file_path(image_id)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+    # try:
+    #     # Query for the binary image data
+    #     cursor.execute("SELECT image FROM images WHERE id = %s;", (str(image_id),))
+    #     image = cursor.fetchone()
+
+    #     if image is None:
+    #         return jsonify({'error': 'Image not found'}), 404
+
+    #     image_binary = image[0]  # Extract binary data
+
+    #     cursor.close()
+    #     conn.close()
+
+    #     # Send the image as a binary response with the correct MIME type
+    #     return Response(image_binary, content_type='image/jpeg')  # Change to the appropriate MIME type
+    # except Exception as e:
+    #     return jsonify({'error': str(e)}), 500
+
+@app.route('/images/<uuid:image_id>', methods = ['GET', 'PUT', 'DELETE'])
+@app.route('/images', methods=['POST'])
+def all_images(uuid = None):
+    response_object = {'status': 'success'}
+    if request.method == 'POST':
+        post_data = request.get_json()
+        image_file = post_data["data"]
+        image_name = post_data["name"]
+
+        # hash_trie.insert_file(image_data)
+        #### ADD DATA TO DATABASE
+
+        filepath = os.path.join(TEST_IMAGES_DIR, image_name)
+        image_file.save(filepath)
+        return jsonify({"message": "File uploaded successfully", "path": filepath})
+
+
+    # if 
+
 if __name__ == "__main__":
+    # flush db images
+    # upload images
     app.run()
 
 
