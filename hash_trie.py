@@ -31,8 +31,10 @@ def get_path_from_uuid(id: str):
     return path
 
 
-def insert_file(src_path, uuid):
-    hash_trie_path = get_path_from_uuid(uuid)
+def insert_file(src_path, id: str):
+    
+
+    hash_trie_path = get_path_from_uuid(id)
     os.makedirs(hash_trie_path, exist_ok=True)
 
     filename = os.path.basename(src_path)
@@ -44,7 +46,8 @@ def insert_file(src_path, uuid):
 
     return
 
-def retrieve_file_path(id):
+def retrieve_file_path(id: str):
+    
     #given a uuid, return file path for that file
     file_directory = get_path_from_uuid(id)
     obj = os.scandir(file_directory)
@@ -55,7 +58,8 @@ def retrieve_file_path(id):
     
     return os.path.join(file_directory, filename)
     
-def delete_file(id):
+def delete_file(id: str):
+    
     os.remove(retrieve_file_path(id))
     os.removedirs(get_path_from_uuid(id))
     return

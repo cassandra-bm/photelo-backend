@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, jsonify, Response, request
+from flask import Flask, jsonify, Response, request, send_file
 from flask_cors import CORS 
 
 import psycopg2
@@ -8,6 +8,8 @@ from psycopg2.extras import RealDictCursor
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
+import uuid
 
 # from PIL import Image
 
@@ -33,19 +35,6 @@ def get_db_connection():
     conn = psycopg2.connect(**DB_CONFIG)
     return conn
 
-#test images
-# image_metadata = []
-# for i in range(10):
-#     image_data = {
-#         "name": f"""test_image_{i}""",
-#         "date": datetime.now(),
-#         "rating": 1200,
-#         "tags": [],
-#         "uuid": i,
-#         "url": f"""https://picsum.photos/id/{i}/200"""
-#     }
-#     # url = f"""https://picsum.photos/id/{i}/200"""
-#     image_metadata.append(image_data)
 
 @app.route("/ping")
 def ping_pong():
@@ -58,51 +47,49 @@ def get_all_image_metadata():
 
     cursor.execute(
         """
-    select * FROM image_metadata;
+    select * FROM images;
         """)
+    #TODO this query should have search parameters
     metadata = cursor.fetchall()
     cursor.close()
     conn.close()
 
+    for item in metadata:
+        item["id"] = uuid.UUID(item["id"]).hex
     if metadata:
         return jsonify(metadata)
     else:
         return jsonify({'error': 'Metadata not found'}), 404
 
 
-@app.route('/image_library/<uuid:image_id>', methods = ['GET'])
-def get_image_data(image_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+# @app.route('/image_library/<uuid:image_id>', methods = ['GET'])
+# def get_image_data(image_id):
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
 
-    try:
-        image_path = hash_trie.retrieve_file_path(image_id)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+#     try:
+#         image_path = hash_trie.retrieve_file_path(image_id)
+#         return(jsonify(""))
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
+    
 
-    # try:
-    #     # Query for the binary image data
-    #     cursor.execute("SELECT image FROM images WHERE id = %s;", (str(image_id),))
-    #     image = cursor.fetchone()
-
-    #     if image is None:
-    #         return jsonify({'error': 'Image not found'}), 404
-
-    #     image_binary = image[0]  # Extract binary data
-
-    #     cursor.close()
-    #     conn.close()
-
-    #     # Send the image as a binary response with the correct MIME type
-    #     return Response(image_binary, content_type='image/jpeg')  # Change to the appropriate MIME type
-    # except Exception as e:
-    #     return jsonify({'error': str(e)}), 500
-
-@app.route('/images/<uuid:image_id>', methods = ['GET', 'PUT', 'DELETE'])
+@app.route('/images/<image_uuid>', methods = ['GET', 'PUT', 'DELETE'])
 @app.route('/images', methods=['POST'])
-def all_images(uuid = None):
+def all_images(image_uuid = None):
+    
     response_object = {'status': 'success'}
+    if request.method == 'GET':
+            
+        try:
+            image_path = hash_trie.retrieve_file_path(image_uuid)
+            return send_file(image_path, mimetype='image/jpeg')
+        
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     if request.method == 'POST':
+        
         post_data = request.get_json()
         image_file = post_data["data"]
         image_name = post_data["name"]
@@ -112,7 +99,10 @@ def all_images(uuid = None):
 
         filepath = os.path.join(TEST_IMAGES_DIR, image_name)
         image_file.save(filepath)
-        return jsonify({"message": "File uploaded successfully", "path": filepath})
+
+        response_object["message"] = "File uploaded successfully"
+        response_object["path"] = filepath #TODO remove this
+        return jsonify(response_object)
 
 
     # if 

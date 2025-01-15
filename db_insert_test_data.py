@@ -4,6 +4,7 @@ import os
 import random
 
 import hash_trie
+import uuid
 
 # Database connection details
 DB_CONFIG = {
@@ -27,32 +28,20 @@ def bulk_insert_images(conn, images_metadata):
     try:
         cursor = conn.cursor()
 
-        # Prepare the INSERT query
-        # insert_image_query = """
-        #     INSERT INTO images (image) VALUES (%s) RETURNING id;
-        # """
         insert_metadata_query = """
-            INSERT INTO images (name, rating, tags)
-            VALUES (%s, %s, %s) RETURNING id;
+            INSERT INTO images (id, name, rating, tags)
+            VALUES (%s, %s, %s, %s);
         """
-
+        
         # Loop through the images and metadata
         for image_path, metadata in images_metadata:
-            # Read binary image data
-            # with open(image_path, 'rb') as file:
-            #     binary_data = file.read()
-
-            # Insert into `images` table
-            # cursor.execute(insert_image_query, (binary_data,))
-            # image_id = cursor.fetchone()[0]  # Get the generated UUID
-
-            # Insert into `image_metadata` table
+            
+            file_id = uuid.uuid4().hex
             cursor.execute(
                 insert_metadata_query,
-                (metadata['name'], metadata['rating'], metadata['tags'])
+                (file_id, metadata['name'], metadata['rating'], metadata['tags'])
             )
-            image_uuid = cursor.fetchone()[0]  # Get the generated UUID
-            hash_trie.insert_file(image_path, image_uuid)
+            hash_trie.insert_file(image_path, file_id)
 
         # Commit the transaction
         conn.commit()
@@ -89,7 +78,7 @@ def main():
 
     # Collect images and metadata
     images_metadata = get_images_with_metadata(image_directory)
-
+    # print(len(images_metadata))
     if images_metadata:
         # Perform bulk insert
         bulk_insert_images(conn, images_metadata)

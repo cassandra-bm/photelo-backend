@@ -1,13 +1,7 @@
+-- DROP TABLE images; 
 
--- -- Create the images table
--- CREATE TABLE images (
---     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),  -- Unique identifier
---     image BYTEA NOT NULL                            -- Binary data for storing the image
--- );
-
--- Create the image_metadata table
 CREATE TABLE images (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),  -- Unique identifier
+    id CHAR(32) PRIMARY KEY,  -- Unique identifier
     name VARCHAR(100) NOT NULL,                     -- Name of the image
     upload TIMESTAMP DEFAULT CURRENT_TIMESTAMP,     -- Timestamp of the upload
     rating REAL,                                    -- Rating (float equivalent in PostgreSQL)
